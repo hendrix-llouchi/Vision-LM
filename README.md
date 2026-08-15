@@ -84,8 +84,7 @@ graph TD
 ## 🤖 Supported Vision AI Models
 
 ### 1. Groq Cloud (Free Developer Tier)
-* **`llama-3.2-11b-vision-preview`** *(Recommended Default)*: Ultra-fast OCR and attribute extraction (~0.5s–1.0s response latency).
-* **`llama-3.2-90b-vision-preview`**: High-accuracy multimodal reasoning for dense or difficult packaging text.
+* **`qwen/qwen3.6-27b`** *(Recommended Default)*: Active multimodal vision AI model on Groq for ultra-fast OCR, attribute extraction, and packaging comprehension.
 
 ### 2. OpenRouter (Free Multimodal Tier)
 * **`google/gemma-4-26b-a4b-it:free`**: Balanced open-source multimodal extraction.

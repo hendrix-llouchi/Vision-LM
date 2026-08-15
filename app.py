@@ -1052,16 +1052,16 @@ OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY", "") or os.environ.get(
 GROQ_DELAY_SEC     = 6                       # Minimum seconds between Groq/OpenRouter requests
 
 
-def extract_via_groq(b64_image, api_key, model="llama-3.2-11b-vision-preview", max_retries=5):
+def extract_via_groq(b64_image, api_key, model="qwen/qwen3.6-27b", max_retries=5):
     """
-    Send image to Groq chat-completions endpoint (llama-3.2-11b-vision-preview or llama-3.2-90b-vision-preview).
+    Send image to Groq chat-completions endpoint (qwen/qwen3.6-27b).
     Exponential backoff on 429 errors: 5s, 10s, 20s, 40s, 80s.
     """
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
         "model": model,
-        "max_tokens": 1000,
+        "max_tokens": 2048,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": [
@@ -1079,8 +1079,13 @@ def extract_via_groq(b64_image, api_key, model="llama-3.2-11b-vision-preview", m
             continue
         resp.raise_for_status()
         content = resp.json()["choices"][0]["message"]["content"].strip()
+        # Clean think tags and strip markdown fences if present
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
         content = re.sub(r"^```json\s*", "", content)
         content = re.sub(r"\s*```$", "", content)
+        json_match = re.search(r"\{.*\}", content, flags=re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(0))
         return json.loads(content)
     raise Exception(f"Groq API returned 429 after {max_retries} retries.")
 
@@ -1283,14 +1288,14 @@ if current_view == "pipeline":
         col_m1, col_m2 = st.columns(2)
         with col_m1:
             if st.session_state.engine == "Groq API":
-                groq_models = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
-                current_groq = st.session_state.get("groq_model", "llama-3.2-11b-vision-preview")
+                groq_models = ["qwen/qwen3.6-27b"]
+                current_groq = st.session_state.get("groq_model", "qwen/qwen3.6-27b")
                 idx = groq_models.index(current_groq) if current_groq in groq_models else 0
                 st.session_state.groq_model = st.selectbox(
-                    "Groq Vision Model (100% Free)",
+                    "Groq Vision Model (Active Multimodal)",
                     groq_models,
                     index=idx,
-                    help="Free-tier vision models on GroqCloud."
+                    help="Active multimodal vision model on GroqCloud."
                 )
             elif st.session_state.engine == "OpenRouter API":
                 or_models = [
@@ -1307,7 +1312,7 @@ if current_view == "pipeline":
                     help="Free vision models on OpenRouter."
                 )
         with col_m2:
-            st.caption("ℹ️ **Free Tier Note:** Both `llama-3.2-11b-vision-preview` and `llama-3.2-90b-vision-preview` on Groq are free for developers with up to 30 RPM rate limits.")
+            st.caption("ℹ️ **Active Vision Model:** `qwen/qwen3.6-27b` is Groq's official active multimodal model supporting image parsing and extraction.")
         st.markdown("---")
         col3, col4 = st.columns(2)
         with col3:
@@ -1544,7 +1549,7 @@ if all_files:
                         _api_key = st.session_state.get("groq_api_key", "")
                         if not _api_key:
                             raise ValueError("Groq API key is missing. Please enter it in Model Configuration.")
-                        _model = st.session_state.get("groq_model", "llama-3.2-11b-vision-preview")
+                        _model = st.session_state.get("groq_model", "qwen/qwen3.6-27b")
                         record = extract_via_groq(b64, _api_key, model=_model)
                     elif engine == "OpenRouter API":
                         _api_key = st.session_state.get("openrouter_api_key", "")
