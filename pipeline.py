@@ -26,6 +26,7 @@ import io
 # ─────────────────────────────────────────────
 EXTRACTION_ENGINE = "groq"    # Options: "groq", "openrouter"
 GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")  # Groq API key
+GROQ_MODEL    = os.environ.get("GROQ_MODEL", "llama-3.2-11b-vision-preview")  # Free tier vision model
 GROQ_DELAY_SEC = 5            # Minimum seconds between Groq requests
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")  # OpenRouter API key
 IMAGE_FOLDER = "./images"     # Folder containing your product images
@@ -128,15 +129,16 @@ TRIGGER = "Extract the product data from this image and return only the JSON obj
 
 
 
-def extract_via_groq(image_paths, max_retries=5):
+def extract_via_groq(image_paths, model=None, max_retries=5):
     """
     ── GROQ API SWAP POINT ──
     Send images to Groq's OpenAI-compatible chat-completions endpoint using
-    meta-llama/llama-4-scout-17b-16e-instruct with vision support.
+    llama-3.2-11b-vision-preview (or configured GROQ_MODEL) with vision support.
     - Mandatory per-request delay controlled by GROQ_DELAY_SEC.
     - Exponential backoff starting at 30s on 429 rate-limit errors, max 5 retries.
     Returns a list of result dicts identical to the other extractors.
     """
+    model = model or GROQ_MODEL
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -144,10 +146,10 @@ def extract_via_groq(image_paths, max_retries=5):
     }
     results = []
     for img_path in image_paths:
-        print(f"  [Groq API] Extracting: {img_path.name}")
+        print(f"  [Groq API ({model})] Extracting: {img_path.name}")
         b64 = preprocess_image(img_path)
         payload = {
-            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+            "model": model,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {
@@ -396,7 +398,7 @@ def export_excel(rows, output_path):
             cell.border = cell_border
         ws.row_dimensions[row_idx].height = 15
 
-    col_widths = [18, 14, 24, 32, 16, 55, 14, 16, 18, 50]
+    col_widths = [32, 16, 32, 18, 12, 18, 14, 18, 20, 20, 22, 22, 35]
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
 

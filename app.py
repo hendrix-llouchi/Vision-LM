@@ -1052,15 +1052,15 @@ OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY", "") or os.environ.get(
 GROQ_DELAY_SEC     = 6                       # Minimum seconds between Groq/OpenRouter requests
 
 
-def extract_via_groq(b64_image, api_key, max_retries=5):
+def extract_via_groq(b64_image, api_key, model="llama-3.2-11b-vision-preview", max_retries=5):
     """
-    Send image to Groq chat-completions endpoint (meta-llama/llama-4-scout-17b-16e-instruct).
+    Send image to Groq chat-completions endpoint (llama-3.2-11b-vision-preview or llama-3.2-90b-vision-preview).
     Exponential backoff on 429 errors: 5s, 10s, 20s, 40s, 80s.
     """
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
-        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "model": model,
         "max_tokens": 1000,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -1085,7 +1085,7 @@ def extract_via_groq(b64_image, api_key, max_retries=5):
     raise Exception(f"Groq API returned 429 after {max_retries} retries.")
 
 
-def extract_via_openrouter(b64_image, api_key, max_retries=5):
+def extract_via_openrouter(b64_image, api_key, model="google/gemma-4-26b-a4b-it:free", max_retries=5):
     """
     Send image to OpenRouter chat-completions endpoint (google/gemma-4-26b-a4b-it:free).
     Exponential backoff on 429 errors: 30s, 60s, 120s, 240s, 480s.
@@ -1093,7 +1093,7 @@ def extract_via_openrouter(b64_image, api_key, max_retries=5):
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
-        "model": "google/gemma-4-26b-a4b-it:free",
+        "model": model,
         "max_tokens": 1000,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -1191,7 +1191,7 @@ def build_excel(rows):
                                  top=Side(style='thin', color='000000'),
                                  bottom=Side(style='thin', color='000000'))
         ws.row_dimensions[row_idx].height = 15
-    col_widths = [18, 14, 24, 32, 16, 55, 14, 16, 18, 50]
+    col_widths = [32, 16, 32, 18, 12, 18, 14, 18, 20, 20, 22, 22, 35]
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.freeze_panes = 'A2'
@@ -1259,9 +1259,9 @@ if current_view == "pipeline":
         col1, col2 = st.columns(2)
         with col1:
             st.session_state.engine = st.selectbox(
-                "Choose model",
+                "Choose API Provider",
                 ["Groq API", "OpenRouter API"],
-                index=1 if st.session_state.get("engine", "OpenRouter API") == "OpenRouter API" else 0
+                index=0 if st.session_state.get("engine", "Groq API") == "Groq API" else 1
             )
         with col2:
             if st.session_state.engine == "Groq API":
@@ -1278,6 +1278,36 @@ if current_view == "pipeline":
                     placeholder="sk-or-v1-...",
                     value=st.session_state.get("openrouter_api_key", "")
                 )
+        
+        # Model Selection Sub-Row
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            if st.session_state.engine == "Groq API":
+                groq_models = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
+                current_groq = st.session_state.get("groq_model", "llama-3.2-11b-vision-preview")
+                idx = groq_models.index(current_groq) if current_groq in groq_models else 0
+                st.session_state.groq_model = st.selectbox(
+                    "Groq Vision Model (100% Free)",
+                    groq_models,
+                    index=idx,
+                    help="Free-tier vision models on GroqCloud."
+                )
+            elif st.session_state.engine == "OpenRouter API":
+                or_models = [
+                    "google/gemma-4-26b-a4b-it:free",
+                    "qwen/qwen-2.5-vl-72b-instruct:free",
+                    "meta-llama/llama-3.2-11b-vision-instruct:free"
+                ]
+                current_or = st.session_state.get("openrouter_model", "google/gemma-4-26b-a4b-it:free")
+                idx = or_models.index(current_or) if current_or in or_models else 0
+                st.session_state.openrouter_model = st.selectbox(
+                    "OpenRouter Free Vision Model",
+                    or_models,
+                    index=idx,
+                    help="Free vision models on OpenRouter."
+                )
+        with col_m2:
+            st.caption("ℹ️ **Free Tier Note:** Both `llama-3.2-11b-vision-preview` and `llama-3.2-90b-vision-preview` on Groq are free for developers with up to 30 RPM rate limits.")
         st.markdown("---")
         col3, col4 = st.columns(2)
         with col3:
@@ -1514,12 +1544,14 @@ if all_files:
                         _api_key = st.session_state.get("groq_api_key", "")
                         if not _api_key:
                             raise ValueError("Groq API key is missing. Please enter it in Model Configuration.")
-                        record = extract_via_groq(b64, _api_key)
+                        _model = st.session_state.get("groq_model", "llama-3.2-11b-vision-preview")
+                        record = extract_via_groq(b64, _api_key, model=_model)
                     elif engine == "OpenRouter API":
                         _api_key = st.session_state.get("openrouter_api_key", "")
                         if not _api_key:
                             raise ValueError("OpenRouter API key is missing. Please enter it in Model Configuration.")
-                        record = extract_via_openrouter(b64, _api_key)
+                        _model = st.session_state.get("openrouter_model", "google/gemma-4-26b-a4b-it:free")
+                        record = extract_via_openrouter(b64, _api_key, model=_model)
                     else:
                         raise ValueError("No valid engine selected.")
 

@@ -1,139 +1,183 @@
-# 🏷️ IMDB Auto-Fill Tool
-**GDSS-Maverick Hackathon 2026** · Premium AI-Driven Image-to-Item Master Data Pipeline
+# 🏷️ Vision-LM: AI-Driven Image-to-IMDB Tool
+> **GDSS-Maverick Hackathon 2026** · Enterprise AI-Driven Multimodal Packaging-to-Item Master Data Pipeline
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gdss-hackathon-aw2swnadk2wp8eka4nmb2k.streamlit.app/)
-
-## 🌐 Live Demo
-Visit the production app here: [GDSS Hackathon Live App](https://gdss-hackathon-aw2swnadk2wp8eka4nmb2k.streamlit.app/)
-
----
-
-## ⚡ Key Features
-
-*   **🧠 Multi-Model Vision AI**: Extracts 13 critical Item Master attributes from packaging images using **Groq (Llama 3.2/4 Vision)** and **OpenRouter (Gemma 2/4)**.
-*   **📸 Mobile-Optimized Live Camera**: Capture snapshots directly using your phone/device camera with automatic queue accumulation and prefix-based grouping.
-*   **⏱️ Rate-Limit Safe Sequential Queue**: Collects all images into a single flat processing queue with a guaranteed 6-second delay between API requests to strictly prevent free-tier rate limiting.
-*   **☁️ Supabase Cloud Sync**: Official `supabase` library integration targeting the `imdb_products` table.
-*   **🔄 Smart Duplicate Detection & Merging**:
-    *   Finds matching products by barcode (if available) or by `brand + weight + packaging_type` (fallback).
-    *   Automatically increments `scan_count`, marks the record `is_duplicate = True`, and merges/fills empty fields from the new scan.
-*   **📊 Item Master Database View**:
-    *   Interactive view displaying all stored items.
-    *   Search filter by brand name or product/item name.
-    *   Visual alert highlighting duplicate entries in red.
-    *   Testing-ready **Clear Database** action.
-*   **📥 Premium Exports**: Downloads custom-formatted Excel spreadsheets (pre-styled with borders and headers) and CSVs.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Groq Vision](https://img.shields.io/badge/Vision%20AI-Groq%20Llama%203.2-orange.svg)](https://groq.com/)
+[![OpenRouter](https://img.shields.io/badge/Vision%20AI-OpenRouter%20Free-purple.svg)](https://openrouter.ai/)
 
 ---
 
-## 📋 The 13 IMDB Columns
+## 🌐 Overview & Live Demo
 
-| Column | Description | Format Rules |
-|---|---|---|
-| **ITEM NAME** | Full descriptive retail product name | e.g. `KNORR CHICKEN STOCK CUBE 20G` |
-| **BARCODE** | Numeric barcode digits | Digits only (no spaces/dashes) |
-| **MANUFACTURER** | Producing company name | e.g. `UNILEVER` |
-| **BRAND** | Brand name exactly as shown | e.g. `KNORR` |
-| **WEIGHT** | Net weight or volume | No space between number and unit (e.g. `80G`, `1L`) |
-| **PACKAGING TYPE** | Standard container category | `SACHET`, `BOTTLE`, `BOX`, `CAN`, `POUCH` etc. |
-| **COUNTRY** | Origin country as printed | e.g. `MALAYSIA`, `THAILAND` |
-| **VARIANT** | Specific flavor/formula variant | e.g. `ORIGINAL`, `LOW FAT`, `REDUCED SALT` |
-| **TYPE** | Short product category | e.g. `MAYONNAISE`, `SEASONING`, `DETERGENT` |
-| **FRAGRANCE FLAVOR**| Scent or taste descriptor | e.g. `LEMON`, `CHICKEN`, `VANILLA` |
-| **PROMOTION** | On-package promotional text | e.g. `BUY 2 FREE 1`, `20% EXTRA FREE` |
-| **ADDONS** | Included extras or bonuses | e.g. `SPOON INCLUDED`, `FREE RECIPE BOOK` |
-| **TAGLINE** | Short promotional slogan | e.g. `TASTE THE DIFFERENCE` |
+**Vision-LM** is an end-to-end computer vision and LLM parsing pipeline engineered to extract structured retail **Item Master Data (IMDB)** directly from product packaging photographs. 
+
+* **Live Web Application**: [GDSS Hackathon Production App](https://gdss-hackathon-aw2swnadk2wp8eka4nmb2k.streamlit.app/)
+* **Core Function**: Parses 13 standardized catalog attributes (Item Name, Barcode, Manufacturer, Brand, Weight, Packaging Type, Country, Variant, Type, Fragrance/Flavor, Promotion, Addons, Tagline) from multi-angle retail images with automated conflict resolution, fuzzy deduplication, and cloud synchronization.
+
+---
+
+## ⚡ Key Capabilities
+
+* **🧠 Multimodal Vision AI Models**:
+  * **Groq Cloud (100% Free Developer Tier)**: Ultra-low latency inference using `llama-3.2-11b-vision-preview` (default) and `llama-3.2-90b-vision-preview`.
+  * **OpenRouter Free Tier**: Flexible fallback with `google/gemma-4-26b-a4b-it:free`, `qwen/qwen-2.5-vl-72b-instruct:free`, and `meta-llama/llama-3.2-11b-vision-instruct:free`.
+* **📸 Live Mobile Camera & Batch Uploader**: Instant capture directly from mobile devices or desktop file upload with prefix-based multi-image grouping (e.g., `S221234199_front.jpg` & `S221234199_back.jpg` grouped as single SKU).
+* **⏱️ Rate-Limit Safe Sequential Queue**: Enforces a non-blocking adaptive pacing window (minimum 6s interval) to guarantee error-free execution within free-tier API quotas.
+* **🔄 Fuzzy Deduplication & Smart Merge**:
+  * Barcode OCR matching with SequenceMatcher tolerance ($>0.85$).
+  * SKU brand and item name similarity resolution with size/weight validation guards.
+  * Cross-image attribute merging with scan counter incrementing.
+* **☁️ Supabase Cloud Synchronization**: Instant sync to PostgreSQL `imdb_products` table.
+* **📊 Item Master Database UI**: Real-time searchable data grid with live duplicate alerts, inline SKU filtering, and bulk wipe actions.
+* **📥 Enterprise Excel & CSV Export**: Formatted `.xlsx` generation using `openpyxl` with Calibri headers, thin cell borders, freeze panes (`A2`), and auto-fitted column widths.
+
+---
+
+## 📐 Pipeline Architecture
+
+```mermaid
+graph TD
+    A[Image Input: File Upload / Mobile Camera] --> B[Stage 1: Preprocessing & Aspect Ratio Scaling]
+    B --> C[Rate-Limit Safe Sequential Queue]
+    C --> D[Stage 2: Vision Model Extraction]
+    D -->|Groq Llama 3.2 Vision / OpenRouter| E[Stage 3: Multi-Perspective Aggregation]
+    E --> F[Majority Voting & Field Merging]
+    F --> G[Stage 4: Normalization & Regex Validation]
+    G --> H[Fuzzy Duplicate Check & Barcode Match]
+    H --> I[Supabase Database Cloud Sync]
+    H --> J[Openpyxl Styled Excel & CSV Export]
+```
+
+### Stage Breakdown:
+1. **Stage 1 — Ingestion & Preprocessing**: Images are validated, converted to RGB, dynamically resized to $\le 1024\times 1024$ preserving aspect ratios, and encoded as base64 data URIs. Filename prefixes identify multi-angle photos for the same item.
+2. **Stage 2 — Multimodal Extraction**: Base64 payloads are sent via OpenAI-compatible endpoints with strict JSON schema instructions.
+3. **Stage 3 — Aggregation & Conflict Resolution**: Multi-image extractions for a single product are merged via majority consensus voting (`Counter.most_common(1)`), using longest-string tiebreakers.
+4. **Stage 4 — Validation, Normalization & Export**: 
+   - Non-numeric characters stripped from barcodes.
+   - Spaces removed between weight values and units (`500 G` $\rightarrow$ `500G`).
+   - Uppercase applied across all string fields; empty strings `""` substituted for missing attributes (never `null`).
+
+---
+
+## 📋 The 13 IMDB Columns & Data Dictionary
+
+| Column | Description | Format & Normalization Rules | Example |
+| :--- | :--- | :--- | :--- |
+| **ITEM NAME** | Full descriptive product name | Title with brand, variant, type, and size in uppercase | `KNORR CHICKEN STOCK CUBE 20G` |
+| **BARCODE** | EAN / UPC numeric digits | Strictly digits only (no spaces, dashes, or non-numeric chars) | `5000118047984` |
+| **MANUFACTURER** | Producing company name | Registered company name as printed | `UNILEVER GHANA PLC` |
+| **BRAND** | Brand name | Extracted brand name in uppercase | `KNORR` |
+| **WEIGHT** | Net weight or volume | Number concatenated directly with uppercase unit (no space) | `20G`, `1L`, `500ML`, `2.2KG` |
+| **PACKAGING TYPE** | Standard container category | Category string (`SACHET`, `BOX`, `BOTTLE`, `CAN`, `BAG`, etc.) | `BOX` |
+| **COUNTRY** | Country of origin | Country name as printed on packaging | `GHANA` |
+| **VARIANT** | Specific formula or flavor | Sub-type or flavor descriptor | `CHICKEN`, `ORIGINAL`, `REDUCED SALT` |
+| **TYPE** | Product category | General category classification | `SEASONING`, `SOAP`, `DETERGENT` |
+| **FRAGRANCE FLAVOR**| Scent or taste descriptor | Flavor or perfume notes | `CHICKEN`, `ROSE`, `VANILLA` |
+| **PROMOTION** | Promotional text | Special offers printed on pack | `BUY 2 GET 1 FREE`, `20% EXTRA` |
+| **ADDONS** | Packaged bonus items | Included free gifts or extras | `FREE SPOON INSIDE` |
+| **TAGLINE** | Marketing slogan | Slogan or brand catchphrase | `TASTE THE DIFFERENCE` |
+
+---
+
+## 🤖 Supported Vision AI Models
+
+### 1. Groq Cloud (Free Developer Tier)
+* **`llama-3.2-11b-vision-preview`** *(Recommended Default)*: Ultra-fast OCR and attribute extraction (~0.5s–1.0s response latency).
+* **`llama-3.2-90b-vision-preview`**: High-accuracy multimodal reasoning for dense or difficult packaging text.
+
+### 2. OpenRouter (Free Multimodal Tier)
+* **`google/gemma-4-26b-a4b-it:free`**: Balanced open-source multimodal extraction.
+* **`qwen/qwen-2.5-vl-72b-instruct:free`**: Superior small-text and nutrition panel OCR.
+* **`meta-llama/llama-3.2-11b-vision-instruct:free`**: Standard open Llama vision model.
 
 ---
 
 ## 🛠️ Installation & Setup
 
-### Step 1 — Clone the Repository
+### Prerequisites
+* Python 3.10, 3.11, or 3.12
+* Free API key from [GroqCloud Console](https://console.groq.com/) or [OpenRouter](https://openrouter.ai/)
+
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/hendrix-llouchi/gdss-hackathon
-cd gdss-hackathon
+git clone https://github.com/hendrix-llouchi/Vision-LM.git
+cd Vision-LM
 ```
 
-### Step 2 — Create and Activate Virtual Environment
-```bash
-# Create environment
+### 2. Create & Activate Virtual Environment
+```powershell
+# Windows (PowerShell)
 python -m venv .venv
+.venv\Scripts\Activate.ps1
 
-# Activate (Windows)
-.venv\Scripts\activate
-
-# Activate (Mac/Linux)
+# Linux / macOS
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### Step 3 — Install Dependencies
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Step 4 — Configure Local Secrets
-Streamlit utilizes a local secrets file for keys. Create a folder named `.streamlit` and add a `secrets.toml` file inside it:
+### 4. Configure Secrets (Optional)
+Create `.streamlit/secrets.toml` or set environment variables:
 
 ```toml
 # .streamlit/secrets.toml
-GROQ_API_KEY = "gsk_your_groq_api_key"
-OPENROUTER_API_KEY = "sk-or-v1-your_openrouter_api_key"
+GROQ_API_KEY = "gsk_your_groq_api_key_here"
+OPENROUTER_API_KEY = "sk-or-v1-your_openrouter_api_key_here"
 
-# Supabase Credentials
-SUPABASE_URL = "https://your-project-id.supabase.co"
-SUPABASE_KEY = "your-anon-or-service-key"
+# Supabase (Optional)
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_KEY = "your-supabase-anon-key"
 ```
 
 ---
 
 ## 🚀 Running the Application
 
-Launch the Streamlit dashboard locally:
+### Option A: Launch Interactive Streamlit Web UI
 ```bash
 streamlit run app.py
 ```
-The application will launch automatically at `http://localhost:8501`.
+Open your browser at `http://localhost:8501`.
 
----
-
-## 📐 Pipeline Architecture
-
+### Option B: Run Batch CLI Pipeline
+```bash
+python pipeline.py
 ```
-[ Upload Files / Camera Snapshots ]
-                 │
-                 ▼
-     [ Flat Sequential Queue ] (Strict 6s Delay)
-                 │
-                 ▼
-     [ Vision AI Extraction ] (Groq / OpenRouter)
-                 │
-                 ▼
-[ Grouping & Aggregation ] (Majority vote on prefix groups)
-                 │
-                 ▼
-     [ Normalization & Validation ] (Barcodes, Weights, etc.)
-                 │
-                 ▼
-     [ Supabase Sync / Merge ] ──► [ 📊 Item Master Database ]
-                 │
-                 ▼
-         [ Excel/CSV Export ]
+Outputs predictions to `./IMDB_predictions.xlsx`.
+
+### Option C: Run QA & Automated Tests
+```bash
+python test_pipeline_qa.py
 ```
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```
-gdss-hackathon/
+Vision-LM/
 ├── .streamlit/
-│   ├── config.toml                  # UI styling settings
-│   └── secrets.toml                 # Local API & DB secrets (Git ignored)
-├── app.py                           # Main Streamlit application
-├── pipeline.py                      # CLI runner with checkpointing support
-├── sample_images/                   # Tester images
-├── IMDB_predictions_submission.xlsx  # Hackathon dataset output
-├── requirements.txt                 # Dependencies (including supabase client)
-├── .gitignore                       # Excluded folders, secrets, and environments
-└── README.md                        # Documentation
+│   ├── config.toml                 # Streamlit theme & UI styling settings
+│   └── secrets.toml                # Local API credentials (git-ignored)
+├── sample_images/                  # 10 verified test packaging images
+├── app.py                          # Streamlit UI & camera processing application
+├── pipeline.py                     # CLI batch processing & extraction engine
+├── test_fuzzy.py                   # Duplicate matching & fuzzy comparison tests
+├── test_pipeline_qa.py             # End-to-end automated test harness
+├── IMDB_predictions_submission.xlsx # Formatted reference submission workbook
+├── requirements.txt                # Python project dependencies
+├── LICENSE                         # MIT License
+└── README.md                       # Documentation
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
