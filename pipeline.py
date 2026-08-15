@@ -26,7 +26,7 @@ import io
 # ─────────────────────────────────────────────
 EXTRACTION_ENGINE = "groq"    # Options: "groq", "openrouter"
 GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")  # Groq API key
-GROQ_MODEL    = os.environ.get("GROQ_MODEL", "llama-3.2-11b-vision-preview")  # Free tier vision model
+GROQ_MODEL    = os.environ.get("GROQ_MODEL", "qwen/qwen3.6-27b")  # Active Groq multimodal model
 GROQ_DELAY_SEC = 5            # Minimum seconds between Groq requests
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")  # OpenRouter API key
 IMAGE_FOLDER = "./images"     # Folder containing your product images
@@ -165,7 +165,7 @@ def extract_via_groq(image_paths, model=None, max_retries=5):
                     ],
                 },
             ],
-            "max_tokens": 1000,
+            "max_tokens": 2048,
         }
         success = False
         for attempt in range(max_retries):
@@ -182,10 +182,15 @@ def extract_via_groq(image_paths, model=None, max_retries=5):
                     continue
                 resp.raise_for_status()
                 content = resp.json()["choices"][0]["message"]["content"].strip()
-                # Strip markdown fences if present
+                # Clean think tags and strip markdown fences if present
+                content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
                 content = re.sub(r"^```json\s*", "", content)
                 content = re.sub(r"\s*```$", "", content)
-                parsed = json.loads(content)
+                json_match = re.search(r"\{.*\}", content, flags=re.DOTALL)
+                if json_match:
+                    parsed = json.loads(json_match.group(0))
+                else:
+                    parsed = json.loads(content)
                 parsed["source_file"] = img_path.name
                 results.append(parsed)
                 success = True
