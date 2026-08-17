@@ -4,7 +4,7 @@
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gdss-hackathon-aw2swnadk2wp8eka4nmb2k.streamlit.app/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Groq Vision](https://img.shields.io/badge/Vision%20AI-Groq%20Llama%203.2-orange.svg)](https://groq.com/)
+[![Groq Vision](https://img.shields.io/badge/Vision%20AI-Groq%20Qwen%203.6%2027B-orange.svg)](https://groq.com/)
 [![OpenRouter](https://img.shields.io/badge/Vision%20AI-OpenRouter%20Free-purple.svg)](https://openrouter.ai/)
 
 ---
@@ -21,10 +21,10 @@
 ## ⚡ Key Capabilities
 
 * **🧠 Multimodal Vision AI Models**:
-  * **Groq Cloud (100% Free Developer Tier)**: Ultra-low latency inference using `llama-3.2-11b-vision-preview` (default) and `llama-3.2-90b-vision-preview`.
-  * **OpenRouter Free Tier**: Flexible fallback with `google/gemma-4-26b-a4b-it:free`, `qwen/qwen-2.5-vl-72b-instruct:free`, and `meta-llama/llama-3.2-11b-vision-instruct:free`.
-* **📸 Live Mobile Camera & Batch Uploader**: Instant capture directly from mobile devices or desktop file upload with prefix-based multi-image grouping (e.g., `S221234199_front.jpg` & `S221234199_back.jpg` grouped as single SKU).
-* **⏱️ Rate-Limit Safe Sequential Queue**: Enforces a non-blocking adaptive pacing window (minimum 6s interval) to guarantee error-free execution within free-tier API quotas.
+  * **Groq Cloud (100% Free Developer Tier)**: High-speed multimodal inference using **`qwen/qwen3.6-27b`** with integrated `<think>` tag sanitization and JSON parsing (~2.5s–3.0s latency).
+  * **OpenRouter Free Tier**: Multimodal fallback supporting `google/gemma-4-26b-a4b-it:free`, `qwen/qwen-2.5-vl-72b-instruct:free`, and `meta-llama/llama-3.2-11b-vision-instruct:free`.
+* **📸 Live Mobile Camera & Batch Uploader**: Instant capture directly from mobile devices or desktop file upload with prefix-based multi-image grouping (e.g., `S221234199_front.jpg` & `S221234199_back.jpg` automatically grouped as a single SKU).
+* **⏱️ Rate-Limit Safe Sequential Queue**: Enforces an adaptive pacing window and exponential backoff to ensure smooth execution within Groq's 8,000 TPM free-tier quota.
 * **🔄 Fuzzy Deduplication & Smart Merge**:
   * Barcode OCR matching with SequenceMatcher tolerance ($>0.85$).
   * SKU brand and item name similarity resolution with size/weight validation guards.
@@ -41,8 +41,8 @@
 graph TD
     A[Image Input: File Upload / Mobile Camera] --> B[Stage 1: Preprocessing & Aspect Ratio Scaling]
     B --> C[Rate-Limit Safe Sequential Queue]
-    C --> D[Stage 2: Vision Model Extraction]
-    D -->|Groq Llama 3.2 Vision / OpenRouter| E[Stage 3: Multi-Perspective Aggregation]
+    C --> D[Stage 2: Multimodal Extraction]
+    D -->|Groq Qwen 3.6 27B / OpenRouter| E[Stage 3: Multi-Perspective Aggregation]
     E --> F[Majority Voting & Field Merging]
     F --> G[Stage 4: Normalization & Regex Validation]
     G --> H[Fuzzy Duplicate Check & Barcode Match]
@@ -84,11 +84,11 @@ graph TD
 ## 🤖 Supported Vision AI Models
 
 ### 1. Groq Cloud (Free Developer Tier)
-* **`qwen/qwen3.6-27b`** *(Recommended Default)*: Active multimodal vision AI model on Groq for ultra-fast OCR, attribute extraction, and packaging comprehension.
+* **`qwen/qwen3.6-27b`** *(Default)*: Groq's active multimodal vision AI model. Offers fast OCR, packaging comprehension, and attribute extraction. Features built-in `<think>` tag stripping and structured JSON parsing.
 
 ### 2. OpenRouter (Free Multimodal Tier)
-* **`google/gemma-4-26b-a4b-it:free`**: Balanced open-source multimodal extraction.
 * **`qwen/qwen-2.5-vl-72b-instruct:free`**: Superior small-text and nutrition panel OCR.
+* **`google/gemma-4-26b-a4b-it:free`**: Balanced open-source multimodal extraction.
 * **`meta-llama/llama-3.2-11b-vision-instruct:free`**: Standard open Llama vision model.
 
 ---
@@ -122,7 +122,7 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configure Secrets (Optional)
-Create `.streamlit/secrets.toml` or set environment variables:
+Create `.streamlit/secrets.toml` or `.env`:
 
 ```toml
 # .streamlit/secrets.toml
