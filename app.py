@@ -1144,7 +1144,7 @@ def aggregate(records):
 
 def validate(record):
     record["BARCODE"] = re.sub(r"[^\d]", "", record.get("BARCODE", ""))
-    weight = record.get("WEIGHT", "").upper()
+    weight = record.get("WEIGHT", "").upper().strip()
     weight = re.sub(r"(\d)\s+(G|KG|ML|L|MG)\b", r"\1\2", weight)
     record["WEIGHT"] = weight
     for field in ["ITEM_NAME", "MANUFACTURER", "BRAND", "PACKAGING_TYPE",
