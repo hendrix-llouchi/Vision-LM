@@ -335,7 +335,7 @@ def validate_and_normalize(record):
     record["BARCODE"] = re.sub(r"[^\d]", "", record.get("BARCODE", ""))
 
     # WEIGHT: uppercase, no space between number and unit
-    weight = record.get("WEIGHT", "").upper()
+    weight = record.get("WEIGHT", "").upper().strip()
     weight = re.sub(r"(\d)\s+(G|KG|ML|L|MG)\b", r"\1\2", weight)
     record["WEIGHT"] = weight
 

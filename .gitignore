@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 .clinerules
 .streamlit/secrets.toml
-
-
+checkpoint.json
+IMDB_predictions.xlsx
+test_report.json
